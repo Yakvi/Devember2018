@@ -6,8 +6,6 @@ set CommonCompilerFlags= -DDEVEMBER_DEV=1 -DDEVEMBER_WIN32=1 %CommonCompilerFlag
 set CommonLinkerFlags= -incremental:no -opt:ref user32.lib gdi32.lib winmm.lib
 set DLLLLinkerFlags= -incremental:no -opt:ref -PDB:devember_%random%.pdb -EXPORT:GameGetSoundSamples -EXPORT:GameUpdateAndRender -EXPORT:DEBUGGameFrameEnd
 
-REM TODO - can we just build both with one exe?
-
 IF NOT EXIST ..\build mkdir ..\build
 pushd ..\build
 

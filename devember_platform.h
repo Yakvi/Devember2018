@@ -9,9 +9,9 @@
 // NOTE: Types
 //
 #include <stdint.h>
-#include <stddef.h>
-#include <limits.h>
-#include <float.h>
+// #include <stddef.h>
+// #include <limits.h>
+// #include <float.h>
 
 typedef int8_t s8;
 typedef int16_t s16;
@@ -47,6 +47,36 @@ typedef double f64;
 #else
 #define Assert(Expression)
 #endif
+
+#define InvalidCodePath Assert(!"InvalidCodePath")
+#define InvalidDefaultCase default: { InvalidCodePath; } break
+
+#define Kilobytes(Value) ((Value)*1024LL)
+#define Megabytes(Value) (Kilobytes(Value) * 1024LL)
+#define Gigabytes(Value) (Megabytes(Value) * 1024LL)
+#define Terabytes(Value) (Gigabytes(Value) * 1024LL)
+
+#define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
+#define InArray(Count, Array) (Count < ArrayCount(Array))
+
+#define AlignPow2(Value, Alignment) ((Value + ((Alignment) - 1)) & ~((Alignment) - 1))
+#define Align4(Value) ((Value + 3) & ~3)
+#define Align8(Value) ((Value + 7) & ~7)
+#define Align16(Value) ((Value + 15) & ~15)
+
+inline u32
+SafeTruncateUInt64(u64 Value)
+{
+    Assert(Value <= 0xFFFFFFFF);
+    u32 Result = (u32)Value;
+    return (Result);
+}
+
+struct open_file
+{
+    u32 DataSize;
+    void *Data;
+};
 
 #define DEVEMBER_PLATFORM_H
 #endif
