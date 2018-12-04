@@ -1,9 +1,7 @@
 /* =======================================================================
    $File: Devember 2018 - win32 layer $
    $Date: 01.12.2018 $
-   $Revision: $
    $Creator: Ivan Yakymchak $
-   $Notice: (C) Copyright 2018 by Ivan Yakymchak. All Rights Reserved. $
    ======================================================================= */
 
 #include <windows.h>

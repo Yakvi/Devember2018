@@ -11,7 +11,6 @@ REM TODO - can we just build both with one exe?
 IF NOT EXIST ..\build mkdir ..\build
 pushd ..\build
 
-REM 64-bit build
 REM Optimization switches /wO2
 echo WAITING FOR PDB > lock.tmp
 REM cl %CommonCompilerFlags% -O2 -c ..\code\devember_optimized.cpp -Fodevember_optimized.obj -LD
