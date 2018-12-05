@@ -125,8 +125,7 @@ $32linker = 'user32.lib','gdi32.lib'   #Creates and manipulates the standard ele
 $32linker += 'winmm.lib'               #Provides access to the original WinMM audio API.
 # NOTE: Extra parameters for devember.dll linker
 $dlllinker = '-Fmdevember', '-LD'      #Creates a map file
-$dlllinker2 = '-EXPORT:GameGetSoundSamples', '-EXPORT:GameUpdateAndRender', '-EXPORT:DEBUGGameFrameEnd'
-$dlllinker2 += '-PDB:devember_' + $(Get-Date -format "HH-mm-ss-ms") + '.pdb'
+$dlllinker2 = '-EXPORT:MainLoop'
 # NOTE: Extra parameters for devember.dll linker
 $creaturelinker = '-Fmcreature', '-LD'      #Creates a map file
 $creaturelinker2 = '-EXPORT:GameGetSoundSamples', '-EXPORT:GameUpdateAndRender'
@@ -149,8 +148,8 @@ write-Output ""
 #Read-And-Color-Code -split $optimizedObj -title "optimized game obj" 
 
 # DEVEMBER DLL
-#$devember = & cl $compiler -Od ..\code\devember.cpp devember_optimized.obj $dlllinker $linker $dlllinker2
-#Read-And-Color-Code -split $devember -title "devember dll"
+$devember = & cl $compiler -Od ..\code\devember.cpp $dlllinker $linker $dlllinker2
+Read-And-Color-Code -split $devember -title "devember dll"
 #del lock.tmp
 
 # TEST ASSET BUILDER

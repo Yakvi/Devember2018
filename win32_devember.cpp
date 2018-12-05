@@ -7,6 +7,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include "devember_platform.h"
+#include "win32_devember.h"
 
 internal void
 Win32Error(char *A, char *B, char *C)
@@ -17,8 +18,7 @@ Win32Error(char *A, char *B, char *C)
     OutputDebugStringA(Buffer);
 }
 
-internal open_file
-Win32ReadFile(char *FileName)
+internal PLATFORM_READ_ENTIRE_FILE(Win32ReadEntireFile)
 {
     open_file Result = {};
 
@@ -65,9 +65,10 @@ Win32ReadFile(char *FileName)
     return (Result);
 }
 
-internal void
-Win32WriteFile(open_file *File, char *FileName)
+internal PLATFORM_WRITE_ENTIRE_FILE(Win32WriteEntireFile)
 {
+    b32 Result = false;
+
     HANDLE FileHandle = CreateFileA(FileName, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
     if (FileHandle != INVALID_HANDLE_VALUE)
     {
@@ -81,28 +82,56 @@ Win32WriteFile(open_file *File, char *FileName)
             Win32Error("File writing to", FileName, "failed.");
         }
 
+        Result = true;
         CloseHandle(FileHandle);
     }
     else
     {
         Win32Error("Handle creation for", FileName, "failed.");
     }
+
+    return (Result);
 }
 
-int CALLBACK
-WinMain(HINSTANCE Instance,
-        HINSTANCE PrevInstance,
-        LPSTR CommandLine,
-        int CmdShow)
+internal win32_program_code
+Win32GetProgramCode(char *DLLName)
+{
+    win32_program_code Result = {};
+
+    Result.ProgramDLL = LoadLibraryA(DLLName);
+    if (Result.ProgramDLL)
+    {
+        Result.MainLoop = (main_loop *)
+            GetProcAddress(Result.ProgramDLL, "MainLoop");
+
+        if (Result.MainLoop)
+        {
+            Result.IsValid = true;
+        }
+    }
+
+    return (Result);
+}
+
+int main(int argc, char const *argv[])
 {
     char *FileName = "H:/Devember2018/data/test.cpp";
-    open_file File = Win32ReadFile(FileName);
 
-    OutputDebugStringA((char *)File.Data);
+    main_memory Memory = {};
+    Memory.MemorySize = Megabytes(20);
+    Memory.Memory = VirtualAlloc(0, (memory_index)Memory.MemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
-    // FormatFile(&File); TODO: r/RestOfTheDamnRoutine
+    Memory.PlatformAPI.ReadEntireFile = Win32ReadEntireFile;
+    Memory.PlatformAPI.WriteEntireFile = Win32WriteEntireFile;
 
-    Win32WriteFile(&File, FileName);
+    Memory.TEMPFileName = FileName;
+
+    win32_program_code Program = Win32GetProgramCode("H:/Devember2018/build/devember.dll");
+
+    if (Program.IsValid)
+    {
+        Program.MainLoop(&Memory);
+    }
 
     return (0);
 }

@@ -78,5 +78,31 @@ struct open_file
     void *Data;
 };
 
+#define PLATFORM_READ_ENTIRE_FILE(name) open_file name(char *FileName)
+typedef PLATFORM_READ_ENTIRE_FILE(platform_read_entire_file);
+
+#define PLATFORM_WRITE_ENTIRE_FILE(name) b32 name(open_file *File, char *FileName)
+typedef PLATFORM_WRITE_ENTIRE_FILE(platform_write_entire_file);
+
+struct platform_api
+{
+    platform_read_entire_file *ReadEntireFile;
+    platform_write_entire_file *WriteEntireFile;
+};
+
+struct main_memory
+{
+    u64 MemorySize;
+    void *Memory;
+
+    char *TEMPFileName;
+
+    b32 IsLoaded;
+    platform_api PlatformAPI;
+};
+
+#define MAIN_LOOP(name) void name(main_memory *Memory)
+typedef MAIN_LOOP(main_loop);
+
 #define DEVEMBER_PLATFORM_H
 #endif
