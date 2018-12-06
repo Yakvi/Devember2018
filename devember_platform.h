@@ -75,6 +75,7 @@ SafeTruncateUInt64(u64 Value)
 struct open_file
 {
     u32 DataSize;
+    u32 Cursor;
     void *Data;
 };
 
@@ -87,7 +88,7 @@ typedef PLATFORM_WRITE_ENTIRE_FILE(platform_write_entire_file);
 struct platform_api
 {
     platform_read_entire_file *ReadEntireFile;
-    platform_write_entire_file *WriteEntireFile;
+    platform_write_entire_file *SaveToFile;
 };
 
 struct main_memory

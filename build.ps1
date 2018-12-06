@@ -157,7 +157,7 @@ Read-And-Color-Code -split $devember -title "devember dll"
 # Read-And-Color-Code -split $asset -title "test asset builder" 
 
 # WIN32 PLATFORM LAYER
-$win32devember = & cl $compiler -Od ..\code\win32_devember.cpp -Fmwin32_devember $linker $32linker
+#$win32devember = & cl $compiler -Od ..\code\win32_devember.cpp -Fmwin32_devember $linker $32linker
 Read-And-Color-Code -split $win32devember -title "win32 platform layer"
 
 Write-Host ""
