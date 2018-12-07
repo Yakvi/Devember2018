@@ -23,13 +23,10 @@ extern "C" MAIN_LOOP(MainLoop)
         Memory->IsLoaded = true;
     }
 
-    State->CurrentFile = Platform.ReadEntireFile(State->CurrentFileName); // TODO: This will eventually create problems. We must actually use buffers specifically for each file
+    State->CurrentFile = Platform.ReadEntireFile(State->CurrentFileName); // TODO(ivan): This will eventually create problems. We must actually use buffers specifically for each file
     Assert(State->CurrentFile.DataSize <= MAX_BUFFER_SIZE);
 
-    string *String = GetString(State, "This is a test.\n");
-    Overwrite(State, String);
-    String = GetString(State, "Ciao Chiara.\n");
-    Overwrite(State, String);
+    Insert(State, "//", 0);
     // TODO: Insert (and move the text)
     // FormatFile(&File); TODO: r/RestOfTheDamnRoutine
     Platform.SaveToFile(&State->CurrentFile, State->CurrentFileName);

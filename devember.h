@@ -96,6 +96,7 @@ struct program_state
     open_file CurrentFile;
     memory_arena Arena;
 
+    string *FirstFreeString;
     string_chunk *FirstFreeChunk;
 };
 

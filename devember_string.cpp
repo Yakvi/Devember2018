@@ -4,7 +4,7 @@
    $Creator: Ivan Yakymchak $
    ======================================================================= */
 
-internal string_chunk *
+inline string_chunk *
 GetNewChunk(program_state *State, string_chunk *Prev)
 {
     string_chunk *NewChunk;
@@ -12,6 +12,7 @@ GetNewChunk(program_state *State, string_chunk *Prev)
     {
         NewChunk = State->FirstFreeChunk;
         State->FirstFreeChunk = NewChunk->Next;
+        NewChunk->Next = 0;
     }
     else
     {
@@ -26,14 +27,14 @@ GetNewChunk(program_state *State, string_chunk *Prev)
     return (NewChunk);
 }
 
-internal string *
+inline string
 GetString(program_state *State, char *Input)
 {
-    string *Result = PushStruct(&State->Arena, string);
+    string Result = {};
 
     u32 StringLength = 0;
     u32 CurrentChunkSize = 0;
-    string_chunk *Chunk = Result->FirstChunk = GetNewChunk(State, 0);
+    string_chunk *Chunk = Result.FirstChunk = GetNewChunk(State, 0);
 
     for (char *At = Input;
          *At;
@@ -47,40 +48,37 @@ GetString(program_state *State, char *Input)
             Chunk = GetNewChunk(State, Chunk);
         }
     }
-    Chunk->Buffer[CurrentChunkSize] = '\0';
-    
-    Result->Length = StringLength;
+    Chunk->Buffer[CurrentChunkSize] = 0;
+
+    Result.Length = StringLength;
 
     return (Result);
 }
 
 internal b32
-Overwrite(program_state *State, string *String, u32 DesiredPos = MAX_BUFFER_SIZE)
+Overwrite(program_state *State, string Source, char *Dest, u32 Cursor, u32 *DataSize)
 {
     b32 StringEnded = false;
+    u32 Typed = 0;
 
-    if(DesiredPos >= MAX_BUFFER_SIZE)
-    {
-        DesiredPos = END_OF_CURRENT_FILE(State);
-    }
-
-    open_file *File = &State->CurrentFile;
-
-    File->Cursor = DesiredPos;
-    char *Dest = (char *)File->Data + File->Cursor;
-    for (string_chunk *Chunk = String->FirstChunk;
+    for (string_chunk *Chunk = Source.FirstChunk;
          Chunk;)
     {
-        if(!StringEnded)
+        if (!StringEnded)
         {
             for (u32 CurrentChar = 0;
-                CurrentChar < STRING_CHUNK_SIZE;
-                ++CurrentChar)
+                 CurrentChar < STRING_CHUNK_SIZE;
+                 ++CurrentChar)
             {
-                if (Chunk->Buffer[CurrentChar])
+                if (Chunk->Buffer[CurrentChar] &&
+                    Typed++ < Source.Length)
                 {
-                    *Dest++ = Chunk->Buffer[CurrentChar];
-                    ++File->DataSize;
+                    Dest[Cursor++] = Chunk->Buffer[CurrentChar];
+
+                    if (Cursor > *DataSize)
+                    {
+                        *DataSize = *DataSize + 1;
+                    }
                 }
                 else
                 {
@@ -95,8 +93,35 @@ Overwrite(program_state *State, string *String, u32 DesiredPos = MAX_BUFFER_SIZE
         State->FirstFreeChunk = Chunk;
         Chunk = Chunk->Next;
         State->FirstFreeChunk->Next = Temp;
-
     }
 
     return (StringEnded);
+}
+
+internal void
+Overwrite(program_state *State, char *Input, u32 DesiredPos)
+{
+    open_file *File = &State->CurrentFile;
+
+    File->Cursor = DesiredPos;
+    char *Dest = File->Data;
+    string String = GetString(State, Input);
+
+    Overwrite(State, String, File->Data, File->Cursor, &File->DataSize);
+}
+
+internal void
+Insert(program_state *State, char *Input, u32 DesiredPos)
+{
+    open_file *File = &State->CurrentFile;
+    
+    char *Dest = File->Data;
+    
+    string ShiftedText = GetString(State, File->Data + DesiredPos);
+    string InsertedText = GetString(State, Input);
+
+    u32 NewCursor = DesiredPos + InsertedText.Length;
+
+    Overwrite(State, ShiftedText, File->Data, NewCursor, &File->DataSize);
+    Overwrite(State, InsertedText, File->Data, DesiredPos, &File->DataSize);
 }

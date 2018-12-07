@@ -76,7 +76,7 @@ struct open_file
 {
     u32 DataSize;
     u32 Cursor;
-    void *Data;
+    char *Data;
 };
 
 #define PLATFORM_READ_ENTIRE_FILE(name) open_file name(char *FileName)
