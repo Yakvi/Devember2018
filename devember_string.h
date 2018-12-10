@@ -5,12 +5,13 @@
    $Creator: Ivan Yakymchak $
    ======================================================================= */
 
-#define STRING_CHUNK_SIZE 8
+#define MAX_CHUNK_LENGTH 8
 #define END_OF_CURRENT_FILE(State) State->CurrentFile.DataSize
 
 struct string_chunk
 {
-    char Buffer[STRING_CHUNK_SIZE];
+    u32 CurrentChunkSize;
+    char Buffer[MAX_CHUNK_LENGTH];
     string_chunk *Next;
 };
 
@@ -18,6 +19,7 @@ struct string
 {
     u32 Length;
     string_chunk *FirstChunk;
+    string_chunk *LastChunk;
 };
 
 #define DEVEMBER_STRING_H

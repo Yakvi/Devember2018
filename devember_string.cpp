@@ -5,7 +5,7 @@
    ======================================================================= */
 
 inline string_chunk *
-GetNewChunk(program_state *State, string_chunk *Prev)
+GetNewChunk(program_state *State, string *String)
 {
     string_chunk *NewChunk;
     if (State->FirstFreeChunk)
@@ -19,109 +19,151 @@ GetNewChunk(program_state *State, string_chunk *Prev)
         NewChunk = PushStruct(&State->Arena, string_chunk);
     }
 
-    if (Prev)
+    NewChunk->CurrentChunkSize = 0;
+
+    if(String->LastChunk)
     {
-        Prev->Next = NewChunk;
+        String->LastChunk->Next = NewChunk;
     }
+    String->LastChunk = NewChunk;
 
     return (NewChunk);
 }
 
-inline string
-GetString(program_state *State, char *Input)
+inline string_chunk *
+GetNextFreeChunk(program_state *State, string *String)
 {
-    string Result = {};
-
-    u32 StringLength = 0;
-    u32 CurrentChunkSize = 0;
-    string_chunk *Chunk = Result.FirstChunk = GetNewChunk(State, 0);
-
-    for (char *At = Input;
-         *At;
-         ++At, ++StringLength)
+    string_chunk *Result = String->LastChunk;
+    if (Result->CurrentChunkSize >= MAX_CHUNK_LENGTH)
     {
-        Chunk->Buffer[CurrentChunkSize++] = *At;
-
-        if (CurrentChunkSize == STRING_CHUNK_SIZE)
-        {
-            CurrentChunkSize = 0;
-            Chunk = GetNewChunk(State, Chunk);
-        }
+       Result = GetNewChunk(State, String);
     }
-    Chunk->Buffer[CurrentChunkSize] = 0;
-
-    Result.Length = StringLength;
 
     return (Result);
 }
 
-internal b32
-Overwrite(program_state *State, string Source, char *Dest, u32 Cursor, u32 *DataSize)
+inline u32
+ReadChunk(string_chunk *Chunk, char *Dest)
 {
-    b32 StringEnded = false;
+    Assert(Chunk->CurrentChunkSize <= MAX_CHUNK_LENGTH);
+    Assert(Chunk->CurrentChunkSize > 0);
     u32 Typed = 0;
-
-    for (string_chunk *Chunk = Source.FirstChunk;
-         Chunk;)
+    char *At = Chunk->Buffer;
+    while (*At && (Typed++ <= MAX_CHUNK_LENGTH))
     {
-        if (!StringEnded)
-        {
-            for (u32 CurrentChar = 0;
-                 CurrentChar < STRING_CHUNK_SIZE;
-                 ++CurrentChar)
-            {
-                if (Chunk->Buffer[CurrentChar] &&
-                    Typed++ < Source.Length)
-                {
-                    Dest[Cursor++] = Chunk->Buffer[CurrentChar];
-
-                    if (Cursor > *DataSize)
-                    {
-                        *DataSize = *DataSize + 1;
-                    }
-                }
-                else
-                {
-                    // NOTE(ivan): We reached end of the string
-                    StringEnded = true;
-                    break;
-                }
-            }
-        }
-
-        string_chunk *Temp = State->FirstFreeChunk;
-        State->FirstFreeChunk = Chunk;
-        Chunk = Chunk->Next;
-        State->FirstFreeChunk->Next = Temp;
+        *Dest++ = *At++;
     }
 
-    return (StringEnded);
+    return Typed;
+}
+
+inline void
+CloseString(program_state *State, string *String)
+{
+    // Add null terminator
+    string_chunk *Chunk = GetNextFreeChunk(State, String);
+    Chunk->Buffer[Chunk->CurrentChunkSize++] = 0;
+}
+
+inline string
+GetString(program_state *State)
+{
+    string Result = {};
+
+    Result.FirstChunk = Result.LastChunk = GetNewChunk(State, &Result);
+    Result.Length = 0;
+
+    return (Result);
 }
 
 internal void
-Overwrite(program_state *State, char *Input, u32 DesiredPos)
+Write(program_state *State, char *Source, string *Dest)
+{
+    string_chunk *Chunk = GetNextFreeChunk(State, Dest);
+    Chunk->Buffer[Chunk->CurrentChunkSize++] = *Source;
+    ++Dest->Length;
+}
+
+inline string
+ToString(program_state *State, char *At)
+{
+    string String = GetString(State);
+
+    while (*At)
+    {
+        Write(State, At++, &String);
+    }
+    CloseString(State, &String);
+
+    return (String);
+}
+
+inline u32
+ToChar(program_state *State, string *Source, char *Dest, u32 MaxLength = UINT32_MAX)
+{
+    u32 Typed = 0;
+    for (;;)
+    {
+        string_chunk *Chunk = Source->FirstChunk;
+        if (Chunk && (Typed < MaxLength))
+        {
+            Typed += ReadChunk(Chunk, Dest + Typed);
+
+            Source->FirstChunk = Chunk->Next;
+            Chunk->Next = State->FirstFreeChunk;
+            State->FirstFreeChunk = Chunk;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return (Typed);
+}
+
+internal void
+OverwriteToFile(program_state *State, char *Input, u32 DesiredPos)
 {
     open_file *File = &State->CurrentFile;
+    if(DesiredPos > File->DataSize)
+    {
+        DesiredPos = File->DataSize;
+    }
 
     File->Cursor = DesiredPos;
     char *Dest = File->Data;
-    string String = GetString(State, Input);
+    string String = ToString(State, Input);
 
-    Overwrite(State, String, File->Data, File->Cursor, &File->DataSize);
+    u32 Typed = ToChar(State, &String, File->Data + File->Cursor);
+    u32 NewCursor = File->Cursor + Typed;
+    if (NewCursor > File->DataSize)
+    {
+        File->DataSize = NewCursor;
+    }
 }
 
 internal void
-Insert(program_state *State, char *Input, u32 DesiredPos)
+InsertToFile(program_state *State, char *Input, u32 DesiredPos)
 {
     open_file *File = &State->CurrentFile;
-    
+    if(DesiredPos > File->DataSize)
+    {
+        File->Cursor = File->DataSize;
+    }
+
     char *Dest = File->Data;
-    
-    string ShiftedText = GetString(State, File->Data + DesiredPos);
-    string InsertedText = GetString(State, Input);
 
-    u32 NewCursor = DesiredPos + InsertedText.Length;
+    string ShiftedText = ToString(State, File->Data + File->Cursor);
+    string InsertedText = ToString(State, Input);
 
-    Overwrite(State, ShiftedText, File->Data, NewCursor, &File->DataSize);
-    Overwrite(State, InsertedText, File->Data, DesiredPos, &File->DataSize);
+    u32 Shift = File->Cursor + InsertedText.Length;
+
+    ToChar(State, &ShiftedText, File->Data + Shift);
+    u32 Typed = ToChar(State, &InsertedText, File->Data + File->Cursor);
+    u32 NewCursor = File->Cursor + Typed;
+    if (NewCursor > File->DataSize)
+    {
+        File->DataSize = NewCursor;
+    }
 }
